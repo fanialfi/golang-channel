@@ -4,7 +4,7 @@ channel digunakan untuk menghubungkan goruntine satu dengan goruntine yang lain.
 Dalam komunikasi-nya channel digunakna sebagai pengirim pada goruntine, dan penerima pada goruntine lain.
 Proses pengiriman dan penerimaan data pada channel bersifat **blocking** atau _synchronous_.
 
-![proses pengiriman dan penerimaan data pada channel][def]
+![proses pengiriman dan penerimaan data pada channel][channel]
 
 channel merupakan sebuah variabel, dibuat dengan menggunakan keyword `make` dan `chan`, variabel channel bertugas sebagai pengirim atau penerima sebuah data.
 
@@ -74,4 +74,52 @@ penerimaan data dari channel bersifat blocking, artinya statement `message1 := <
 selain itu variabel channel juga bisa di pass sebagai parameter pada function.
 Cukup tambahkan keyword `chan` pada deklarasi parameter agar operasi pass channel variabel bisa dilakukan.
 
-[def]: ./img/channel.png
+## buffered channel
+
+proses kirim data pada channel secara default dilakukan secara synchronous (**blocking**) atau tidak di **buffer** di memori.
+Ketika terjadi proses kirim-terima data pada sebuah goruntine, maka harus ada goruntine lain yang menerima data pada channel yang sama.
+
+Pada buffered channel dilakukan sedikit berbeda, pada channel jenis ini, ditentukan juga jumplah buffer nya,
+angka tersebut menjadi penentu jumplah data yang dapat diterima secara bersamaan selama jumplah data tidak melebihi jumplah buffer yang ditentukan.
+
+Jika jumplah data sudah melewati batas buffer, maka pengiriman selanjutnya hanya bisa dilakukan ketika satu data yang sudah terkirim sudah diambil oleh channel goruntine yang lain, sehingga ada slot yang kosong.
+
+Proses pengiriman data pada buffered channel bersifat asynchronous, namun ketika jumplah data yang dikirim sudah melebihi batas maksimum buffer, maka proses selanjutnya bersifat synchronous.
+
+![proses pengiriman bufered channel][buffer]
+
+Untuk penerapan buffered channel, sama seperti penerapan channel pada umumnya, perbedaannya pada saat deklarasi saja.
+saat pembuatan buffered channel menggunakan keyword `make` parameter kedua diisi jumplah / ukuran buffer yang dapat ditampung.
+
+Nilai buffer pada channel dimulai dari 0, maka jika nilainya 3 berarti jumplah maksimal adalah 4.
+
+```go
+package main
+
+import (
+  "fmt"
+  "runtime"
+)
+
+func main(){
+  runtime.GOMAXPROCS(4)
+
+  message := make(chan string, 3)
+	go func() {
+		for {
+			i := <-message
+			fmt.Printf("receive data : %s\n", i)
+		}
+	}()
+
+	
+	for i := 1; i <= 5; i++ {
+		fmt.Printf("sending data-%d\n", i)
+		data := fmt.Sprintf("sending data-%d\n", i)
+		message <- data
+	}
+}
+```
+
+[channel]: ./img/channel.png
+[buffer]: ./img/channel-buffer.png

@@ -16,7 +16,7 @@ func printMessage(msg chan string) {
 func main() {
 	runtime.GOMAXPROCS(4)
 
-	messages := make(chan string)
+	messages := make(chan string, 5)
 
 	sayHelloTo := func(name string) {
 		data := fmt.Sprintf("Hello %s", name)
@@ -28,14 +28,16 @@ func main() {
 	go sayHelloTo("alfi")
 	go sayHelloTo("fanialfi")
 
-	message1 := <-messages
-	fmt.Println(message1)
+	go func() {
+		message1 := <-messages
+		fmt.Println(message1)
 
-	message2 := <-messages
-	fmt.Println(message2)
+		message2 := <-messages
+		fmt.Println(message2)
 
-	message3 := <-messages
-	fmt.Println(message3)
+		message3 := <-messages
+		fmt.Println(message3)
+	}()
 
 	// menggunakan channel sebagai tipe data parameter
 	for _, each := range []string{"fani", "alfi", "fanialfi"} {
@@ -75,4 +77,25 @@ func main() {
 		printMessage(messages)
 	}
 
+	// contoh penggunaan buffered channel
+	message := make(chan string, 3)
+	go func() {
+		for {
+			i := <-message
+			fmt.Printf("receive data : %s\n", i)
+		}
+	}()
+
+	go func() {
+		for i := 1; i <= 5; i++ {
+			fmt.Printf("sending data-%d\n", i)
+			data := fmt.Sprintf("sending data-%d\n", i)
+			message <- data
+		}
+	}()
+
+	// proses dibawah digunakan sebagai blocking proses di atas,
+	// karena proses di atas dilakukan secara asynchronous semua
+	var str string
+	fmt.Scanln(&str)
 }
