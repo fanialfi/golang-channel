@@ -6,96 +6,86 @@ import (
 	"time"
 )
 
-// channel sebagai tipe data parameter
-//
-// passing data bertipe channel lewat parameter bersifat "pass by reference", yang di transmisikan adalah pointer datanya, bukan nilai datanya
-func printMessage(msg chan string) {
-	fmt.Println(<-msg)
+// function untuk mencari nilai rata rata
+func getAvg(numbers []int, ch chan float64) {
+	sum := 0
+
+	for _, elm := range numbers {
+		sum += elm
+	}
+
+	ch <- float64(sum) / float64(len(numbers))
+}
+
+// function untuk mencari nilai tertinggi
+// nilai tertinggi akan dikirim via channel
+func getMax(numbers []int, ch chan int) {
+	max := numbers[0]
+
+	for _, elm := range numbers {
+		if max < elm {
+			max = elm
+		}
+	}
+
+	ch <- max
+}
+
+func sayHelloTo(name string, ch chan string) {
+	data := fmt.Sprintf("Hello %s", name)
+
+	ch <- data
+}
+
+func displayLoop(ch chan int) {
+	for {
+		fmt.Printf("receive message : %d\n", <-ch)
+	}
 }
 
 func main() {
 	runtime.GOMAXPROCS(4)
 
-	messages := make(chan string, 5)
+	messages := make(chan string, 2)
 
-	sayHelloTo := func(name string) {
-		data := fmt.Sprintf("Hello %s", name)
-
-		messages <- data
-	}
-
-	go sayHelloTo("fani")
-	go sayHelloTo("alfi")
-	go sayHelloTo("fanialfi")
-
-	go func() {
-		message1 := <-messages
-		fmt.Println(message1)
-
-		message2 := <-messages
-		fmt.Println(message2)
-
-		message3 := <-messages
-		fmt.Println(message3)
-	}()
-
-	// menggunakan channel sebagai tipe data parameter
-	for _, each := range []string{"fani", "alfi", "fanialfi"} {
-		micro := time.Now().UnixMicro()
-
-		// menjalankan gorountine di anonymous function
-		// anonymous function dibawah ini bersifat asynchronous
-		go func(who string) {
-			data := fmt.Sprintf("Selamat Pagi %s\t, selisih waktu : %d microsecond", who, time.Now().UnixMicro()-micro)
-
-			messages <- data
-		}(each)
-	}
-
-	{
-		// ketika terjadi proses kirim data via channel dari sebuah goruntine,
-		// maka harus ada goruntine lain yang menerima data dari channel yang sama,
-		// dengan proses serah terima yang bersifat blocking
-		//
-		// Maksudnya, baris kode setelah kode pengiriman dan penerimaan data tidak akan di proses sebelum proses serah terima itu sendiri selesai
-		// seperti contoh berikut ini :
-		data := make(chan string)
-		go func(data chan string) {
-			fmt.Println(<-data)
-		}(data)
-
-		go func() {
-			msg := fmt.Sprintf("sekarang hari %v", time.Now().Weekday())
-
-			data <- msg
-		}()
-		// var pesan string
-		// fmt.Scanln(&pesan)
-	}
-
-	for i := 0; i < 3; i++ {
-		printMessage(messages)
-	}
+	go sayHelloTo("fani", messages)
+	go sayHelloTo("alfi", messages)
+	go sayHelloTo("fanialfi", messages)
 
 	// contoh penggunaan buffered channel
-	message := make(chan string, 3)
-	go func() {
-		for {
-			i := <-message
-			fmt.Printf("receive data : %s\n", i)
-		}
-	}()
+	message := make(chan int, 2)
+	go displayLoop(message)
 
-	go func() {
+	func() {
 		for i := 1; i <= 5; i++ {
 			fmt.Printf("sending data-%d\n", i)
-			data := fmt.Sprintf("sending data-%d\n", i)
-			message <- data
+			message <- i
 		}
 	}()
 
-	// proses dibawah digunakan sebagai blocking proses di atas,
-	// karena proses di atas dilakukan secara asynchronous semua
-	var str string
-	fmt.Scanln(&str)
+	ch1 := make(chan float64, 4)
+	ch2 := make(chan int, 4)
+
+	numbers := []int{3, 4, 3, 5, 6, 3, 2, 2, 6, 3, 4, 6, 3}
+	fmt.Println("numbers :", numbers)
+
+	go getAvg(numbers, ch1)
+	go getMax(numbers, ch2)
+
+	// penggunaan keyword select pada channel
+	for i := 0; i < 5; i++ {
+		micro := time.Now().UnixMicro()
+		select {
+		case msg1 := <-messages:
+			fmt.Printf("pesan ke-1, %s, selisih waktu : %d microsecond\n", msg1, time.Now().UnixMicro()-micro)
+		case msg2 := <-messages:
+			fmt.Printf("pesan ke-2, %s, selisih waktu : %d microsecond\n", msg2, time.Now().UnixMicro()-micro)
+		case msg3 := <-messages:
+			fmt.Printf("pesan ke-3, %s, selisih waktu : %d microsecond\n", msg3, time.Now().UnixMicro()-micro)
+		case avg := <-ch1:
+			fmt.Printf("rata rata\t : %.2f\n", avg)
+		case max := <-ch2:
+			fmt.Printf("max\t\t : %d\n", max)
+		}
+	}
 }

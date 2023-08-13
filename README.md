@@ -121,5 +121,76 @@ func main(){
 }
 ```
 
+
+## keyword select pada channel
+
+channel membuat enginer menjadi lebih mudah dalam me-manage goruntine, namum meskipun lewat channel manajemen goruntine menjadi lebih mudah, fungsi utama dari chanel bukanlah untuk control, melainkan sharing data antar goruntine.
+
+ada kalanya kita tak hanya membutuhkan 1 channel saja untuk melakukan komunikasi antar goruntine.
+Tergantung jenis kasusnya, sangat mungkin lebih dari satu channel dibutuhkan.
+Disitulah kegunaan `select`.
+
+Cara penggunaan `select` untuk kontrol channel mirip sama seperti penggunaan `switch` untuk seleksi kondisi.
+
+```go
+package main
+
+import (
+  "runtime"
+  "fmt"
+)
+
+funv getAvg(numbers []int, ch chan float64){
+  sum := 0
+
+  for _, elm := range numbers {
+    sum += elm
+  }
+
+  ch <- float64(sum) / float64(len(numbers))
+}
+
+func getMax(numbers []int, ch chan int){
+  max := numbers[0]
+
+  for _, elm := range numbers {
+    if max < elm {
+      max = elm
+    }
+  }
+
+  ch <- max
+}
+
+func main(){
+  runtime.GOMAXPROCS(4)
+
+  numbers := []int{1,2,3,4,5,6,7,8,9,10}
+  fmt.Println("numbers :", numbers)
+
+  var ch1 = make(chan float64, 3)
+  go getAvg(numbers, ch1)
+
+  var ch2 = make(chan int, 3)
+  go getMax(numbers, ch2)
+
+  for i := 0; i < 2; i++ {
+    select {
+      case avg := <- ch1 :
+        fmt.Println("avg :", avg)
+      case max := <- ch2 :
+        fmt.Println("max :", max)
+    }
+  }
+}
+```
+
+pada kode diatas, pengiriman data pada channel `ch1` dan `ch2` dikontrol menggunakan `select`, terdapat dua `case` kondisi penerimaan data dari kedua channel tersebut :
+
+- kondisi pertama terpenuhi ketika channel `ch1` menerima sebuah data
+- dan kondisi kedua terpenuhi ketika chanel `ch2` menerima sebuah data.
+
+karena terdapat 2 channel, disiapkah perulangan sebanyak 2x
+
 [channel]: ./img/channel.png
 [buffer]: ./img/channel-buffer.png
