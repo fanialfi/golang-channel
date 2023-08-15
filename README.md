@@ -192,5 +192,63 @@ pada kode diatas, pengiriman data pada channel `ch1` dan `ch2` dikontrol menggun
 
 karena terdapat 2 channel, disiapkah perulangan sebanyak 2x
 
+## range - close pada channel
+
+proses pengambilan banyak data dari channel bisa lebih mudah dilakukan dengan memanfaatkan keyword `for range`, keyword tersebut bila diterapkan pada channel berfungsi untuk handle penerimaan data pada channel, setiap ada data yang dikirim ke channel, maka akan mentriger `for range`, dan perulangan akan terus menerus dijalankan selama channel yang digunakan tersebut belum di **close** atau di nonaktifkan.
+
+meskipun proses pengiriman data pada channel sudah selesai, namun jika channel yang digunakan tersebut belum di close maka proses pengulangan akan tetap berjalan & pada akhirnya akan menjadikan error.
+
+berbeda pada penggunaan `for range` pada tipe data `slice` atau `map`, penggunaan `for range` pada channel hanya mengembailkan satu variabel yang dapat diiterasi.
+
+contoh penerapan `for` - `range` - `close` pada channel :
+
+```go
+package main
+
+import (
+  "fmt"
+  "time"
+  "runtime"
+)
+
+// digunakan untuk mengirim data ke channel, 
+// didalam function ini dijalankan perulangan sebanyak 20 kali, 
+// di tiap perulangan data dikirim via channel, 
+// setelah semua perulangan selesai, channel ditutup menggunakan function close()
+func sendMessage(msg chan string) {
+
+	for i := 0; i < 20; i++ {
+		now := time.Now()
+		x, x1, x2 := time.Now().Clock()
+		msg <- fmt.Sprintf("Hello, hari ini hari %s, jam %d:%d:%d:%d", time.Now().Weekday(), x, x1, x2, now.Nanosecond())
+	}
+
+	// digunakan untuk menutup atau menonaktifkan channel
+	// setelah channel di close atau di nonaktifkan,
+	// maka channel tidak bisa digunakan lagi
+	close(msg)
+}
+
+// digunakan untuk menghandle penerimaan data pada channel, 
+// didalam function berikut, channel dilooping menggunakan keyword `for` - `range`
+// di tiap looping, data yang di terima dari channel ditampilkan
+func printMessage(ch chan string) {
+	for message := range ch {
+		fmt.Println(message)
+	}
+}
+
+func main(){
+  runtime.GOMAXPROCS(4)
+
+  forRangeChan := make(chan string, 2)
+	go sendMessage(forRangeChan)
+	printMessage(forRangeChan)
+}
+```
+
+pada contoh code diatas, setelah 20 data sukses diterima dan dikirim, channel `forRangeChan` diclose (`close(msg)`), membuat perulangan dalam function `printMessage()` juga akan berhenti, 
+jika channel tidak di close, maka pada function `printMessage()` akan terjebak dalam infinite loop.
+
 [channel]: ./img/channel.png
 [buffer]: ./img/channel-buffer.png
