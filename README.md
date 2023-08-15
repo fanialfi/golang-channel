@@ -250,5 +250,64 @@ func main(){
 pada contoh code diatas, setelah 20 data sukses diterima dan dikirim, channel `forRangeChan` diclose (`close(msg)`), membuat perulangan dalam function `printMessage()` juga akan berhenti, 
 jika channel tidak di close, maka pada function `printMessage()` akan terjebak dalam infinite loop.
 
+# channel direction
+
+jika channel digunakan sebagai parameter pada function, level akses channel bisa ditentukan. 
+Apakah hanya sebagai pengirim, penerima, atau keduanya.
+Konsep ini disebut dengan _channel direction_.
+
+Cara pemberian level akses denan cara menambahkan tanda `<-` sebelum atau sesudah keyword `chan`, 
+untuk lebih jelasnya bisa dilihat di table berikut :
+
+|syntaks|penjelasan|
+|-------|----------|
+|`ch chan string`|parameter `ch` bisa digunakan untuk **mengirim** dan **menerima** data|
+|`ch chan <- string`|parameter `ch` hanya bisa digunakan untuk **mengirim** data saja|
+|`ch <- chan string`|parameter `ch` hanya bisa digunakan untuk **menerima** data saja|
+
+contoh penggunaan channel direction :
+
+```go
+package main
+
+import (
+  "fmt"
+  "time"
+  "runtime"
+)
+
+// parameter ch hanya bisa digunakan untuk mengirimkan data
+func Send(ch chan<- string) {
+	x, x1, x2 := time.Now().Clock()
+	now := time.Now()
+	ch <- fmt.Sprintf("sekarang jam %d:%d:%d:%d", x, x1, x2, now.Nanosecond())
+}
+
+// parameter ch hanya bisa digunakan untuk menerima data
+func Receive(ch <-chan string) {
+	fmt.Println(<-ch)
+}
+
+// parameter ch bisa digunakan untuk mengirim maupun menerima data
+func Booth(ch chan string) {
+	now := time.Now()
+	x, x1, x2 := now.Clock()
+
+	ch <- fmt.Sprintf("jam %d:%d:%d:%d", x, x1, x2, now.Nanosecond())
+
+  // ada kemungkinan data yang dikirim di atas atau yang dikirim di function Send() akan diterima dibawan sini
+	fmt.Println("booth :", <-ch)
+}
+
+func main(){
+  runtime.GOMAXPROCS(4)
+
+  chanDirection := make(chan string, 3)
+	go lib.Send(chanDirection)
+	go lib.Booth(chanDirection)
+	lib.Receive(chanDirection)
+}
+```
+
 [channel]: ./img/channel.png
 [buffer]: ./img/channel-buffer.png

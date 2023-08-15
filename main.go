@@ -66,6 +66,18 @@ func main() {
 	go alpi.SendMessage(alpi.Data)
 	alpi.PrintMessage(alpi.Data)
 
+	// contoh penggunaan channel direction
+	fmt.Println()
+	chanDirection := make(chan string, 3)
+	go lib.Send(chanDirection)
+	go lib.Booth(chanDirection)
+	lib.Receive(chanDirection)
+
+	// digunakan untuk blocking proses diatas
+	// pada penggunaan channel direction
+	var str string
+	fmt.Scanln(&str)
+
 	akhir := time.Now()
 	fmt.Printf("\nprogram berjalan selama : %v\n", akhir.Sub(awal))
 }
