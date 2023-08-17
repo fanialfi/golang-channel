@@ -250,7 +250,7 @@ func main(){
 pada contoh code diatas, setelah 20 data sukses diterima dan dikirim, channel `forRangeChan` diclose (`close(msg)`), membuat perulangan dalam function `printMessage()` juga akan berhenti, 
 jika channel tidak di close, maka pada function `printMessage()` akan terjebak dalam infinite loop.
 
-# channel direction
+## channel direction
 
 jika channel digunakan sebagai parameter pada function, level akses channel bisa ditentukan. 
 Apakah hanya sebagai pengirim, penerima, atau keduanya.
@@ -308,6 +308,62 @@ func main(){
 	lib.Receive(chanDirection)
 }
 ```
+
+##  channel - timeout
+
+teknik channel timeout digunakan untuk mengontrol penerimaan data dari channel yang mengacu ke kapan waktu di terimanya data, dengan durasi timeout bisa ditentukan sendiri.
+
+contoh program sederhana pengaplikasian timeout pada channel.
+
+```go
+package main
+
+import (
+  "fmt"
+  "math/rand"
+  "runtime"
+  "time"
+)
+
+func SendData(ch chan<- int) {
+	for i := 0; true; i++ {
+    // mengirimnakn data pada interval waktu tertentu, dimana durasinya adalah acak / random
+		ch <- i
+
+    // time.Sleep() akan menjeda ke perulangan selanjutnya dengan durasi yang acak
+		time.Sleep(time.Duration(rand.Int()%10+1) * time.Second)
+	}
+}
+
+func RetriveData(ch <-chan int) {
+loop:
+	for {
+		select {
+    
+    // kondisi berikut akan terpenuhi ketika ada serah terima data pada channel ch
+		case data := <-ch:
+			fmt.Print(`receive data "`, data, `"`, "\n")
+    
+    // kondisi berikut akan terpenuhi ketika tidak ada aktifitas serah terima data dari channel ch, dalam durasi 5 detik
+    // Blok inilah yang disebut dengan block timeout
+		case <-time.After(time.Second * 5):
+			fmt.Printf("timeout...\nno activate after 5 seconds")
+			break loop
+		}
+	}
+}
+
+func main(){
+  runtime.GOMAXPROCS(4)
+
+  message := make(chan int, 2)
+
+  go SendData(message)
+  RetriveData(message)
+}
+```
+
+saat program di atas dijalankan, maka akan muncul output setiap ada penerimaan data dalam delay waktu yang acak, ketika tidak ada aktifitas penerimaan data dari channel dalam durasi 5 detik, atau dalam pengiriman data dalam delay waktu lebih dari 5 detik, maka perulangan pengecekan channel akan di berhentikan (`for select`).
 
 [channel]: ./img/channel.png
 [buffer]: ./img/channel-buffer.png

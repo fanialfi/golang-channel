@@ -78,6 +78,11 @@ func main() {
 	var str string
 	fmt.Scanln(&str)
 
+	// implementasi channel timeout
+	message = make(chan int, 2)
+	go lib.SendData(message)
+	lib.RetriveData(message)
+
 	akhir := time.Now()
 	fmt.Printf("\nprogram berjalan selama : %v\n", akhir.Sub(awal))
 }
